@@ -33,6 +33,7 @@ class _RoshabTasksMobileState extends State<RoshabTasksMobile> {
   Future<void> _init() async {
     await NotificationService.instance.init();
     tasks.addAll(await store.load());
+    await backup.createAutomaticBackup(tasks);
     if (mounted) setState(() => ready = true);
   }
 
@@ -64,7 +65,8 @@ class _RoshabTasksMobileState extends State<RoshabTasksMobile> {
                   setSheet(() => reminder = DateTime(date.year, date.month, date.day, time.hour, time.minute));
                 },
                 icon: const Icon(Icons.alarm_add_outlined),
-                label: Text(reminder == null ? 'Set alarm' : DateFormat('MMM d, HH:mm').format(reminder!)))),
+                label: Text(reminder == null ? 'Set alarm' : DateFormat('MMM d, HH:mm').format(reminder!)),
+              )),
               const SizedBox(width: 8),
               Expanded(child: DropdownButtonFormField<String>(value: repeat, decoration: const InputDecoration(labelText: 'Repeat', border: OutlineInputBorder()), items: const ['None', 'Daily', 'Weekly'].map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(), onChanged: (v) => setSheet(() => repeat = v ?? 'None'))),
             ]),
@@ -75,9 +77,8 @@ class _RoshabTasksMobileState extends State<RoshabTasksMobile> {
               final task = Task(id: DateTime.now().microsecondsSinceEpoch.toString(), title: value, reminderAt: reminder, recurring: repeat);
               tasks.add(task);
               await _persist();
-              if (reminder != null) {
-                await NotificationService.instance.schedule(id: task.id.hashCode, title: value, body: 'Roshab Tasks reminder', when: reminder!, recurring: repeat);
-              }
+              await backup.createAutomaticBackup(tasks);
+              if (reminder != null) await NotificationService.instance.schedule(id: task.id.hashCode, title: value, body: 'Roshab Tasks reminder', when: reminder!, recurring: repeat);
               if (sheetContext.mounted) Navigator.pop(sheetContext);
               if (mounted) setState(() {});
             }, icon: const Icon(Icons.save), label: const Text('Save task')),
@@ -91,6 +92,7 @@ class _RoshabTasksMobileState extends State<RoshabTasksMobile> {
     task.completed = !task.completed;
     if (task.completed) await NotificationService.instance.cancel(task.id.hashCode);
     await _persist();
+    await backup.createAutomaticBackup(tasks);
     setState(() {});
   }
 
@@ -98,6 +100,7 @@ class _RoshabTasksMobileState extends State<RoshabTasksMobile> {
     tasks.removeWhere((t) => t.id == task.id);
     await NotificationService.instance.cancel(task.id.hashCode);
     await _persist();
+    await backup.createAutomaticBackup(tasks);
     setState(() {});
   }
 
@@ -156,7 +159,7 @@ class _RoshabTasksMobileState extends State<RoshabTasksMobile> {
   Widget _studentPage() => ListView(padding: const EdgeInsets.all(20), children: [
     const Text('Student Hub', style: TextStyle(fontSize: 30, fontWeight: FontWeight.w900)),
     const SizedBox(height: 6), const Text('Study tools, exams, grades, attendance and notes.', style: TextStyle(color: Colors.white54)), const SizedBox(height: 16),
-    _calculatorCard('GPA Calculator', Icons.calculate, 'Grade points and credits', (value) => StudentTools.gpa([value], [1])),
+    _calculatorCard('GPA Calculator', Icons.calculate, 'Grade points', (value) => StudentTools.gpa([value], [1])),
     _attendanceCard(), _examCard(), _notesCard(), _timetableCard(), _backupCard(),
   ]);
 
@@ -169,7 +172,7 @@ class _RoshabTasksMobileState extends State<RoshabTasksMobile> {
 
   Widget _statsPage(){final done=tasks.where((t)=>t.completed).length;final open=tasks.length-done;return ListView(padding:const EdgeInsets.all(20),children:[const Text('Productivity',style:TextStyle(fontSize:30,fontWeight:FontWeight.w900)),const SizedBox(height:8),const Text('Task completion overview',style:TextStyle(color:Colors.white54)),const SizedBox(height:18),Container(height:270,padding:const EdgeInsets.all(16),decoration:BoxDecoration(color:const Color(0xFF111827),borderRadius:BorderRadius.circular(24)),child:PieChart(PieChartData(centerSpaceRadius:52,sections:[PieChartSectionData(value:(done==0?1:done).toDouble(),title:'Done',radius:78,color:const Color(0xFF22C55E)),PieChartSectionData(value:(open==0?1:open).toDouble(),title:'Open',radius:78,color:const Color(0xFF7C3AED))]))),const SizedBox(height:12),_metric('Completion',tasks.isEmpty?'0%':'${(done/tasks.length*100).round()}%',Icons.insights)]);}
 
-  Widget _profilePage()=>ListView(padding:const EdgeInsets.all(20),children:[const Text('Roshab Tasks',style:TextStyle(fontSize:30,fontWeight:FontWeight.w900)),const SizedBox(height:18),_panel(Icons.person,'Developer',const Column(children:[CircleAvatar(radius:40,backgroundColor:Color(0xFF24183C),child:Icon(Icons.person,size:42,color:Color(0xFFD8B4FE))),SizedBox(height:10),Text('Developed by Roshab Bhandari',style:TextStyle(color:Colors.white54))])),const SizedBox(height:10),_panel(Icons.notifications_active,'Phone notifications',const Text('Scheduled alarms, daily reminders and weekly reminders are supported on the mobile release.')),const SizedBox(height:10),_panel(Icons.cloud_sync_outlined,'Cloud sync',const Text('A credential-safe sync adapter is included. Add your private backend endpoint/token in your release secrets before enabling remote sync.'))]);
+  Widget _profilePage()=>ListView(padding:const EdgeInsets.all(20),children:[const Text('Roshab Tasks',style:TextStyle(fontSize:30,fontWeight:FontWeight.w900)),const SizedBox(height:18),_panel(Icons.person,'Developer',const Column(children:[CircleAvatar(radius:40,backgroundColor:Color(0xFF24183C),child:Icon(Icons.person,size:42,color:Color(0xFFD8B4FE))),SizedBox(height:10),Text('Developed by Roshab Bhandari',style:TextStyle(color:Colors.white54))])),const SizedBox(height:10),_panel(Icons.notifications_active,'Phone notifications',const Text('Scheduled alarms, daily reminders and weekly reminders are supported on the mobile release.')),const SizedBox(height:10),_panel(Icons.cloud_sync_outlined,'Cloud sync',const Text('JWT account and task-sync API is included in sync-server. Configure the server URL and credentials before enabling remote sync.'))]);
 
   Widget _panel(IconData icon,String title,Widget child)=>Container(margin:const EdgeInsets.only(bottom:12),padding:const EdgeInsets.all(18),decoration:BoxDecoration(color:const Color(0xFF111827),borderRadius:BorderRadius.circular(22),border:Border.all(color:Colors.white10)),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Row(children:[Icon(icon,color:const Color(0xFFC4B5FD)),const SizedBox(width:10),Text(title,style:const TextStyle(fontSize:18,fontWeight:FontWeight.w800))]),const SizedBox(height:12),child]));
   Widget _metric(String title,String value,IconData icon)=>Container(padding:const EdgeInsets.all(16),decoration:BoxDecoration(color:const Color(0xFF111827),borderRadius:BorderRadius.circular(20),border:Border.all(color:Colors.white10)),child:Row(children:[Icon(icon,color:const Color(0xFFC4B5FD)),const SizedBox(width:10),Text('$title: ',style:const TextStyle(color:Colors.white54)),Text(value,style:const TextStyle(fontWeight:FontWeight.w900,fontSize:20))]));
