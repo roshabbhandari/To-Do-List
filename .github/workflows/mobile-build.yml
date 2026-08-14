@@ -1,0 +1,78 @@
+name: Roshab Tasks Mobile Builds
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'mobile/**'
+      - '.github/workflows/mobile-build.yml'
+
+jobs:
+  android-apk:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: '3.38.1'
+          cache: true
+
+      - name: Generate Android/iOS platform files
+        run: flutter create --platforms=android,ios --org com.roshabbhandari .
+
+      - name: Get packages
+        run: flutter pub get
+
+      - name: Build reminder-enabled APK
+        run: flutter build apk --release --target lib/main_reminders.dart
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: roshab-tasks-android-apk
+          path: mobile/build/app/outputs/flutter-apk/app-release.apk
+
+  ios-build:
+    name: Build iOS App Bundle
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: '3.38.1'
+          cache: true
+
+      - name: Generate Android/iOS platform files
+        run: flutter create --platforms=android,ios --org com.roshabbhandari .
+
+      - name: Get packages
+        run: flutter pub get
+
+      - name: Build iOS without signing
+        run: flutter build ios --release --no-codesign --target lib/main_reminders.dart
+
+      - name: Package unsigned iOS app
+        run: |
+          mkdir -p ../artifacts/ios
+          cp -R build/ios/iphoneos/Runner.app ../artifacts/ios/RoshabTasks.app
+
+      - name: Upload unsigned iOS app
+        uses: actions/upload-artifact@v4
+        with:
+          name: roshab-tasks-ios-unsigned
+          path: mobile/artifacts/ios/RoshabTasks.app
