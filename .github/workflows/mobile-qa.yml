@@ -1,0 +1,27 @@
+name: Roshab Tasks Mobile QA
+
+on:
+  pull_request:
+    paths:
+      - 'mobile/**'
+  push:
+    paths:
+      - 'mobile/**'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.35.1'
+          channel: stable
+          cache: true
+      - run: flutter create --platforms=android --org com.roshab.bhandari .
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test
