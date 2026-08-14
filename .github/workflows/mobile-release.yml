@@ -22,7 +22,12 @@ jobs:
           channel: stable
           cache: true
       - run: flutter create --platforms=android --org com.roshab.bhandari .
+      - run: sudo apt-get update && sudo apt-get install -y imagemagick
+        working-directory: .
+      - run: magick assets/roshab_tasks_icon.svg -resize 1024x1024 assets/generated_icon.png
       - run: flutter pub get
+      - run: dart run flutter_launcher_icons
+      - run: dart run flutter_native_splash:create
       - run: flutter analyze
       - run: flutter build apk --release
       - uses: actions/upload-artifact@v4
@@ -44,7 +49,12 @@ jobs:
           channel: stable
           cache: true
       - run: flutter create --platforms=ios --org com.roshab.bhandari .
+      - run: brew install imagemagick || true
+        working-directory: .
+      - run: magick assets/roshab_tasks_icon.svg -resize 1024x1024 assets/generated_icon.png
       - run: flutter pub get
+      - run: dart run flutter_launcher_icons
+      - run: dart run flutter_native_splash:create
       - run: flutter analyze
       - run: flutter build ios --release --no-codesign
       - run: ditto -c -k --sequesterRsrc --keepParent build/ios/iphoneos/Runner.app /tmp/roshab-tasks-ios-unsigned.zip
@@ -68,7 +78,12 @@ jobs:
           channel: stable
           cache: true
       - run: flutter create --platforms=android --org com.roshab.bhandari .
+      - run: sudo apt-get update && sudo apt-get install -y imagemagick
+        working-directory: .
+      - run: magick assets/roshab_tasks_icon.svg -resize 1024x1024 assets/generated_icon.png
       - run: flutter pub get
+      - run: dart run flutter_launcher_icons
+      - run: dart run flutter_native_splash:create
       - name: Decode release keystore
         env:
           KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
@@ -92,7 +107,7 @@ jobs:
 
   testflight:
     name: Signed iOS TestFlight
-    if: ${{ secrets.IOS_CERTIFICATE_BASE64 != '' && secrets.IOS_P12_PASSWORD != '' && secrets.IOS_PROVISION_PROFILE_BASE64 != '' && secrets.IOS_TEAM_ID != '' && secrets.APPSTORE_ISSUER_ID != '' && secrets.APPSTORE_KEY_ID != '' && secrets.APPSTORE_PRIVATE_KEY != '' }}
+    if: ${{ secrets.IOS_CERTIFICATE_BASE64 != '' && secrets.IOS_P12_PASSWORD != '' && secrets.IOS_PROVISION_PROFILE_BASE64 != '' && secrets.IOS_PROVISIONING_PROFILE_NAME != '' && secrets.IOS_TEAM_ID != '' }}
     runs-on: macos-latest
     defaults:
       run:
@@ -105,7 +120,12 @@ jobs:
           channel: stable
           cache: true
       - run: flutter create --platforms=ios --org com.roshab.bhandari .
+      - run: brew install imagemagick || true
+        working-directory: .
+      - run: magick assets/roshab_tasks_icon.svg -resize 1024x1024 assets/generated_icon.png
       - run: flutter pub get
+      - run: dart run flutter_launcher_icons
+      - run: dart run flutter_native_splash:create
       - name: Install signing certificate
         env:
           CERT_B64: ${{ secrets.IOS_CERTIFICATE_BASE64 }}
@@ -123,9 +143,22 @@ jobs:
         run: |
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
           echo "$PROFILE_B64" | base64 --decode > ~/Library/MobileDevice/Provisioning\ Profiles/roshab_tasks.mobileprovision
-      - name: Build signed IPA
+      - name: Create export options
         env:
           TEAM_ID: ${{ secrets.IOS_TEAM_ID }}
+          PROFILE_NAME: ${{ secrets.IOS_PROVISIONING_PROFILE_NAME }}
+        run: |
+          cat > ios/ExportOptions.plist <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+          <key>method</key><string>app-store</string>
+          <key>teamID</key><string>${TEAM_ID}</string>
+          <key>signingStyle</key><string>manual</string>
+          <key>provisioningProfiles</key><dict><key>com.roshab.bhandari.roshab_tasks_mobile</key><string>${PROFILE_NAME}</string></dict>
+          </dict></plist>
+          PLIST
+      - name: Build signed IPA
         run: flutter build ipa --release --export-options-plist=ios/ExportOptions.plist
       - uses: actions/upload-artifact@v4
         with:
