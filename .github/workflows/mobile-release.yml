@@ -22,12 +22,7 @@ jobs:
           channel: stable
           cache: true
       - run: flutter create --platforms=android --org com.roshab.bhandari .
-      - run: sudo apt-get update && sudo apt-get install -y imagemagick
-        working-directory: .
-      - run: magick assets/roshab_tasks_icon.svg -resize 1024x1024 assets/generated_icon.png
       - run: flutter pub get
-      - run: dart run flutter_launcher_icons
-      - run: dart run flutter_native_splash:create
       - name: Enable Android core library desugaring
         shell: bash
         run: |
@@ -36,20 +31,20 @@ jobs:
           p = Path('android/app/build.gradle.kts')
           s = p.read_text()
           if 'isCoreLibraryDesugaringEnabled = true' not in s:
-              s = s.replace('targetCompatibility = JavaVersion.VERSION_11', 'targetCompatibility = JavaVersion.VERSION_11\n        isCoreLibraryDesugaringEnabled = true')
-          if 'coreLibraryDesugaring(' not in s:
+              s = s.replace('compileOptions {', 'compileOptions {\n        isCoreLibraryDesugaringEnabled = true', 1)
+          if 'coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")' not in s:
               s += '\n\ndependencies {\n    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")\n}\n'
           p.write_text(s)
           PY
-      - run: flutter analyze
-      - run: flutter build apk --release --target lib/main_reminders.dart
+      - run: flutter analyze lib test
+      - run: flutter build apk --release --target lib/main.dart
       - uses: actions/upload-artifact@v4
         with:
           name: roshab-tasks-android-apk
           path: mobile/build/app/outputs/flutter-apk/app-release.apk
 
   ios:
-    name: iOS Build / TestFlight Preparation
+    name: iOS Simulator Build
     runs-on: macos-latest
     defaults:
       run:
@@ -62,19 +57,14 @@ jobs:
           channel: stable
           cache: true
       - run: flutter create --platforms=ios --org com.roshab.bhandari .
-      - run: brew install imagemagick || true
-        working-directory: .
-      - run: magick assets/roshab_tasks_icon.svg -resize 1024x1024 assets/generated_icon.png
       - run: flutter pub get
-      - run: dart run flutter_launcher_icons
-      - run: dart run flutter_native_splash:create
-      - run: flutter analyze
-      - run: flutter build ios --release --no-codesign
-      - run: ditto -c -k --sequesterRsrc --keepParent build/ios/iphoneos/Runner.app /tmp/roshab-tasks-ios-unsigned.zip
+      - run: flutter analyze lib test
+      - run: flutter build ios --release --simulator --target lib/main.dart
+      - run: ditto -c -k --sequesterRsrc --keepParent build/ios/iphonesimulator/Runner.app /tmp/roshab-tasks-ios-simulator.zip
       - uses: actions/upload-artifact@v4
         with:
-          name: roshab-tasks-ios-unsigned
-          path: /tmp/roshab-tasks-ios-unsigned.zip
+          name: roshab-tasks-ios-simulator
+          path: /tmp/roshab-tasks-ios-simulator.zip
 
   signed_android:
     name: Signed Android APK
@@ -91,12 +81,7 @@ jobs:
           channel: stable
           cache: true
       - run: flutter create --platforms=android --org com.roshab.bhandari .
-      - run: sudo apt-get update && sudo apt-get install -y imagemagick
-        working-directory: .
-      - run: magick assets/roshab_tasks_icon.svg -resize 1024x1024 assets/generated_icon.png
       - run: flutter pub get
-      - run: dart run flutter_launcher_icons
-      - run: dart run flutter_native_splash:create
       - name: Enable Android core library desugaring
         shell: bash
         run: |
@@ -105,8 +90,8 @@ jobs:
           p = Path('android/app/build.gradle.kts')
           s = p.read_text()
           if 'isCoreLibraryDesugaringEnabled = true' not in s:
-              s = s.replace('targetCompatibility = JavaVersion.VERSION_11', 'targetCompatibility = JavaVersion.VERSION_11\n        isCoreLibraryDesugaringEnabled = true')
-          if 'coreLibraryDesugaring(' not in s:
+              s = s.replace('compileOptions {', 'compileOptions {\n        isCoreLibraryDesugaringEnabled = true', 1)
+          if 'coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")' not in s:
               s += '\n\ndependencies {\n    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")\n}\n'
           p.write_text(s)
           PY
@@ -114,9 +99,8 @@ jobs:
         env:
           KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
         run: echo "$KEYSTORE_B64" | base64 --decode > /tmp/roshab-release.keystore
-      - name: Build release APK
-        run: flutter build apk --release --target lib/main_reminders.dart
-      - name: Sign APK with release keystore
+      - run: flutter build apk --release --target lib/main.dart
+      - name: Sign APK
         env:
           STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
           KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
@@ -146,12 +130,7 @@ jobs:
           channel: stable
           cache: true
       - run: flutter create --platforms=ios --org com.roshab.bhandari .
-      - run: brew install imagemagick || true
-        working-directory: .
-      - run: magick assets/roshab_tasks_icon.svg -resize 1024x1024 assets/generated_icon.png
       - run: flutter pub get
-      - run: dart run flutter_launcher_icons
-      - run: dart run flutter_native_splash:create
       - name: Install signing certificate
         env:
           CERT_B64: ${{ secrets.IOS_CERTIFICATE_BASE64 }}
@@ -184,8 +163,7 @@ jobs:
           <key>provisioningProfiles</key><dict><key>com.roshab.bhandari.roshab_tasks_mobile</key><string>${PROFILE_NAME}</string></dict>
           </dict></plist>
           PLIST
-      - name: Build signed IPA
-        run: flutter build ipa --release --export-options-plist=ios/ExportOptions.plist
+      - run: flutter build ipa --release --target lib/main.dart --export-options-plist=ios/ExportOptions.plist
       - name: Prepare App Store Connect API key
         env:
           APPSTORE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
