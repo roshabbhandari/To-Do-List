@@ -1,4 +1,4 @@
-name: Roshab Tasks Mobile Release
+name: RoshUP Mobile Release
 
 on:
   workflow_dispatch:
@@ -9,7 +9,7 @@ on:
 
 jobs:
   android:
-    name: Android APK
+    name: RoshUP Android APK
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -21,8 +21,13 @@ jobs:
           flutter-version: '3.38.1'
           channel: stable
           cache: true
-      - run: flutter create --platforms=android --org com.roshab.bhandari .
+      - run: flutter create --platforms=android --org com.roshabbhandari .
+      - run: sudo apt-get update && sudo apt-get install -y imagemagick
+        working-directory: .
+      - run: magick assets/roshup_icon.svg assets/generated_icon.png
       - run: flutter pub get
+      - run: dart run flutter_launcher_icons
+      - run: dart run flutter_native_splash:create
       - name: Enable Android core library desugaring
         shell: bash
         run: |
@@ -40,11 +45,11 @@ jobs:
       - run: flutter build apk --release --target lib/main.dart
       - uses: actions/upload-artifact@v4
         with:
-          name: roshab-tasks-android-apk
+          name: roshup-android-apk
           path: mobile/build/app/outputs/flutter-apk/app-release.apk
 
   ios:
-    name: iOS Simulator Build
+    name: RoshUP iOS Simulator Build
     runs-on: macos-latest
     defaults:
       run:
@@ -56,18 +61,23 @@ jobs:
           flutter-version: '3.38.1'
           channel: stable
           cache: true
-      - run: flutter create --platforms=ios --org com.roshab.bhandari .
+      - run: flutter create --platforms=ios --org com.roshabbhandari .
+      - run: brew install imagemagick || true
+        working-directory: .
+      - run: magick assets/roshup_icon.svg assets/generated_icon.png
       - run: flutter pub get
+      - run: dart run flutter_launcher_icons
+      - run: dart run flutter_native_splash:create
       - run: flutter analyze lib test
       - run: flutter build ios --release --simulator --target lib/main.dart
-      - run: ditto -c -k --sequesterRsrc --keepParent build/ios/iphonesimulator/Runner.app /tmp/roshab-tasks-ios-simulator.zip
+      - run: ditto -c -k --sequesterRsrc --keepParent build/ios/iphonesimulator/Runner.app /tmp/roshup-ios-simulator.zip
       - uses: actions/upload-artifact@v4
         with:
-          name: roshab-tasks-ios-simulator
-          path: /tmp/roshab-tasks-ios-simulator.zip
+          name: roshup-ios-simulator
+          path: /tmp/roshup-ios-simulator.zip
 
   signed_android:
-    name: Signed Android APK
+    name: Signed RoshUP Android APK
     if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' && secrets.ANDROID_STORE_PASSWORD != '' && secrets.ANDROID_KEY_PASSWORD != '' && secrets.ANDROID_KEY_ALIAS != '' }}
     runs-on: ubuntu-latest
     defaults:
@@ -80,8 +90,13 @@ jobs:
           flutter-version: '3.38.1'
           channel: stable
           cache: true
-      - run: flutter create --platforms=android --org com.roshab.bhandari .
+      - run: flutter create --platforms=android --org com.roshabbhandari .
+      - run: sudo apt-get update && sudo apt-get install -y imagemagick
+        working-directory: .
+      - run: magick assets/roshup_icon.svg assets/generated_icon.png
       - run: flutter pub get
+      - run: dart run flutter_launcher_icons
+      - run: dart run flutter_native_splash:create
       - name: Enable Android core library desugaring
         shell: bash
         run: |
@@ -98,7 +113,7 @@ jobs:
       - name: Decode release keystore
         env:
           KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-        run: echo "$KEYSTORE_B64" | base64 --decode > /tmp/roshab-release.keystore
+        run: echo "$KEYSTORE_B64" | base64 --decode > /tmp/roshup-release.keystore
       - run: flutter build apk --release --target lib/main.dart
       - name: Sign APK
         env:
@@ -108,15 +123,15 @@ jobs:
         run: |
           APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner | sort | tail -1)
           mv build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/app-release-unsigned.apk
-          "$APKSIGNER" sign --ks /tmp/roshab-release.keystore --ks-key-alias "$KEY_ALIAS" --ks-pass "pass:$STORE_PASSWORD" --key-pass "pass:$KEY_PASSWORD" --out build/app/outputs/flutter-apk/RoshabTasks-release.apk build/app/outputs/flutter-apk/app-release-unsigned.apk
-          "$APKSIGNER" verify --verbose build/app/outputs/flutter-apk/RoshabTasks-release.apk
+          "$APKSIGNER" sign --ks /tmp/roshup-release.keystore --ks-key-alias "$KEY_ALIAS" --ks-pass "pass:$STORE_PASSWORD" --key-pass "pass:$KEY_PASSWORD" --out build/app/outputs/flutter-apk/RoshUP-release.apk build/app/outputs/flutter-apk/app-release-unsigned.apk
+          "$APKSIGNER" verify --verbose build/app/outputs/flutter-apk/RoshUP-release.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: roshab-tasks-android-signed-apk
-          path: mobile/build/app/outputs/flutter-apk/RoshabTasks-release.apk
+          name: roshup-android-signed-apk
+          path: mobile/build/app/outputs/flutter-apk/RoshUP-release.apk
 
   testflight:
-    name: Signed iOS TestFlight
+    name: Signed RoshUP TestFlight
     if: ${{ secrets.IOS_CERTIFICATE_BASE64 != '' && secrets.IOS_P12_PASSWORD != '' && secrets.IOS_PROVISION_PROFILE_BASE64 != '' && secrets.IOS_PROVISIONING_PROFILE_NAME != '' && secrets.IOS_TEAM_ID != '' && secrets.APPSTORE_ISSUER_ID != '' && secrets.APPSTORE_KEY_ID != '' && secrets.APPSTORE_PRIVATE_KEY != '' }}
     runs-on: macos-latest
     defaults:
@@ -129,8 +144,13 @@ jobs:
           flutter-version: '3.38.1'
           channel: stable
           cache: true
-      - run: flutter create --platforms=ios --org com.roshab.bhandari .
+      - run: flutter create --platforms=ios --org com.roshabbhandari .
+      - run: brew install imagemagick || true
+        working-directory: .
+      - run: magick assets/roshup_icon.svg assets/generated_icon.png
       - run: flutter pub get
+      - run: dart run flutter_launcher_icons
+      - run: dart run flutter_native_splash:create
       - name: Install signing certificate
         env:
           CERT_B64: ${{ secrets.IOS_CERTIFICATE_BASE64 }}
@@ -147,7 +167,7 @@ jobs:
           PROFILE_B64: ${{ secrets.IOS_PROVISION_PROFILE_BASE64 }}
         run: |
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-          echo "$PROFILE_B64" | base64 --decode > ~/Library/MobileDevice/Provisioning\ Profiles/roshab_tasks.mobileprovision
+          echo "$PROFILE_B64" | base64 --decode > ~/Library/MobileDevice/Provisioning\ Profiles/roshup.mobileprovision
       - name: Create export options
         env:
           TEAM_ID: ${{ secrets.IOS_TEAM_ID }}
@@ -160,7 +180,7 @@ jobs:
           <key>method</key><string>app-store</string>
           <key>teamID</key><string>${TEAM_ID}</string>
           <key>signingStyle</key><string>manual</string>
-          <key>provisioningProfiles</key><dict><key>com.roshab.bhandari.roshab_tasks_mobile</key><string>${PROFILE_NAME}</string></dict>
+          <key>provisioningProfiles</key><dict><key>com.roshabbhandari.roshup</key><string>${PROFILE_NAME}</string></dict>
           </dict></plist>
           PLIST
       - run: flutter build ipa --release --target lib/main.dart --export-options-plist=ios/ExportOptions.plist
@@ -177,5 +197,5 @@ jobs:
         run: xcrun altool --upload-app --type ios --file build/ios/ipa/*.ipa --apiKey "$APPSTORE_KEY_ID" --apiIssuer "$APPSTORE_ISSUER_ID"
       - uses: actions/upload-artifact@v4
         with:
-          name: roshab-tasks-ios-ipa
+          name: roshup-ios-ipa
           path: mobile/build/ios/ipa/*.ipa

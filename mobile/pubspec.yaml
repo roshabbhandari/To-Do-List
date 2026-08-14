@@ -1,7 +1,7 @@
-name: roshab_tasks_mobile
-description: Roshab Tasks student productivity app for Android and iOS.
+name: roshup
+description: RoshUP - an advanced mobile task manager by Roshab Bhandari.
 publish_to: "none"
-version: 1.3.1+5
+version: 1.4.0+6
 
 environment:
   sdk: ">=3.10.0 <4.0.0"
@@ -30,18 +30,18 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
-    - assets/roshab_tasks_icon.svg
+    - assets/roshup_icon.svg
 
 flutter_launcher_icons:
   android: true
   ios: true
   image_path: assets/generated_icon.png
-  adaptive_icon_background: "#070B16"
+  adaptive_icon_background: "#090B12"
   adaptive_icon_foreground: assets/generated_icon.png
 
 flutter_native_splash:
-  color: "#070B16"
+  color: "#090B12"
   image: assets/generated_icon.png
   android_12:
-    color: "#070B16"
+    color: "#090B12"
     image: assets/generated_icon.png

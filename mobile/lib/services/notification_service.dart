@@ -5,12 +5,17 @@ import 'package:timezone/timezone.dart' as tz;
 class NotificationService {
   NotificationService._();
   static final instance = NotificationService._();
-  final _plugin = FlutterLocalNotificationsPlugin();
+
+  final FlutterLocalNotificationsPlugin _plugin = FlutterLocalNotificationsPlugin();
 
   Future<void> init() async {
     tz.initializeTimeZones();
     const android = AndroidInitializationSettings('@mipmap/ic_launcher');
-    const ios = DarwinInitializationSettings();
+    const ios = DarwinInitializationSettings(
+      requestAlertPermission: true,
+      requestBadgePermission: true,
+      requestSoundPermission: true,
+    );
     await _plugin.initialize(
       settings: const InitializationSettings(android: android, iOS: ios),
     );
@@ -21,17 +26,28 @@ class NotificationService {
 
   NotificationDetails get _details => const NotificationDetails(
         android: AndroidNotificationDetails(
-          'roshab_tasks_reminders',
-          'Roshab Tasks Reminders',
-          channelDescription: 'Task reminders',
+          'roshup_reminders',
+          'RoshUP Reminders',
+          channelDescription: 'Task and reminder notifications from RoshUP',
           importance: Importance.max,
           priority: Priority.high,
           playSound: true,
+          enableVibration: true,
         ),
-        iOS: DarwinNotificationDetails(presentAlert: true, presentBadge: true, presentSound: true),
+        iOS: DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+        ),
       );
 
-  Future<void> schedule({required int id, required String title, required String body, required DateTime when, String recurring = 'None'}) async {
+  Future<void> schedule({
+    required int id,
+    required String title,
+    required String body,
+    required DateTime when,
+    String recurring = 'None',
+  }) async {
     final scheduled = tz.TZDateTime.from(when, tz.local);
     if (!scheduled.isAfter(tz.TZDateTime.now(tz.local))) return;
     DateTimeComponents? components;
@@ -45,7 +61,7 @@ class NotificationService {
       notificationDetails: _details,
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       matchDateTimeComponents: components,
-      payload: 'task:$id',
+      payload: 'roshup:$id',
     );
   }
 
