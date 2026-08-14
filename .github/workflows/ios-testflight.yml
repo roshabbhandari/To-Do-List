@@ -1,0 +1,55 @@
+name: Roshab Tasks TestFlight
+
+on:
+  workflow_dispatch:
+
+jobs:
+  testflight:
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: mobile
+    env:
+      IOS_BUNDLE_ID: com.roshabbhandari.roshabTasks
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: '3.38.1'
+          cache: true
+
+      - name: Generate iOS platform files
+        run: flutter create --platforms=ios --org com.roshabbhandari .
+
+      - name: Get packages
+        run: flutter pub get
+
+      - name: Import Apple distribution certificate
+        uses: apple-actions/import-codesign-certs@v3
+        with:
+          p12-file-base64: ${{ secrets.APPLE_CERTIFICATE_P12_BASE64 }}
+          p12-password: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+
+      - name: Download App Store provisioning profile
+        uses: apple-actions/download-provisioning-profiles@v4
+        with:
+          bundle-id: ${{ env.IOS_BUNDLE_ID }}
+          profile-type: IOS_APP_STORE
+          issuer-id: ${{ secrets.APPSTORE_ISSUER_ID }}
+          api-key-id: ${{ secrets.APPSTORE_API_KEY_ID }}
+          api-private-key: ${{ secrets.APPSTORE_API_PRIVATE_KEY }}
+
+      - name: Build signed IPA
+        run: flutter build ipa --release --target lib/main_reminders.dart --build-number ${{ github.run_number }}
+
+      - name: Upload to TestFlight
+        uses: apple-actions/upload-testflight-build@v4
+        with:
+          app-path: mobile/build/ios/ipa/*.ipa
+          issuer-id: ${{ secrets.APPSTORE_ISSUER_ID }}
+          api-key-id: ${{ secrets.APPSTORE_API_KEY_ID }}
+          api-private-key: ${{ secrets.APPSTORE_API_PRIVATE_KEY }}
