@@ -24,6 +24,24 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
+  flutter_native_splash: ^2.4.4
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/roshab_tasks_icon.svg
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: assets/generated_icon.png
+  adaptive_icon_background: "#070B16"
+  adaptive_icon_foreground: assets/generated_icon.png
+
+flutter_native_splash:
+  color: "#070B16"
+  image: assets/generated_icon.png
+  android_12:
+    color: "#070B16"
+    image: assets/generated_icon.png
