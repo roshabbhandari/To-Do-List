@@ -1,4 +1,4 @@
-name: Roshab Tasks Mobile Builds
+name: RoshUP Mobile Builds
 
 on:
   workflow_dispatch:
@@ -25,19 +25,36 @@ jobs:
           flutter-version: '3.38.1'
           cache: true
 
-      - name: Generate Android/iOS platform files
-        run: flutter create --platforms=android,ios --org com.roshabbhandari .
+      - name: Generate Android platform files
+        run: flutter create --platforms=android --org com.roshabbhandari .
 
       - name: Get packages
         run: flutter pub get
 
-      - name: Build reminder-enabled APK
-        run: flutter build apk --release --target lib/main_reminders.dart
+      - name: Enable Android core library desugaring
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('android/app/build.gradle.kts')
+          text = path.read_text()
+          if 'isCoreLibraryDesugaringEnabled = true' not in text:
+              text = text.replace('compileOptions {', 'compileOptions {\n        isCoreLibraryDesugaringEnabled = true', 1)
+          if 'coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")' not in text:
+              text += '\n\ndependencies {\n    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")\n}\n'
+          path.write_text(text)
+          PY
+
+      - name: Analyze mobile code
+        run: flutter analyze lib test
+
+      - name: Build RoshUP APK
+        run: flutter build apk --release --target lib/main.dart
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: roshab-tasks-android-apk
+          name: roshup-android-apk
           path: mobile/build/app/outputs/flutter-apk/app-release.apk
 
   ios-build:
@@ -57,22 +74,25 @@ jobs:
           flutter-version: '3.38.1'
           cache: true
 
-      - name: Generate Android/iOS platform files
-        run: flutter create --platforms=android,ios --org com.roshabbhandari .
+      - name: Generate iOS platform files
+        run: flutter create --platforms=ios --org com.roshabbhandari .
 
       - name: Get packages
         run: flutter pub get
 
-      - name: Build iOS without signing
-        run: flutter build ios --release --no-codesign --target lib/main_reminders.dart
+      - name: Analyze mobile code
+        run: flutter analyze lib test
 
-      - name: Package unsigned iOS app
+      - name: Build RoshUP iOS simulator app
+        run: flutter build ios --release --simulator --target lib/main.dart
+
+      - name: Package iOS simulator app
         run: |
           mkdir -p ../artifacts/ios
-          cp -R build/ios/iphoneos/Runner.app ../artifacts/ios/RoshabTasks.app
+          ditto -c -k --sequesterRsrc --keepParent build/ios/iphonesimulator/Runner.app ../artifacts/ios/RoshUP-Simulator.zip
 
-      - name: Upload unsigned iOS app
+      - name: Upload iOS simulator app
         uses: actions/upload-artifact@v4
         with:
-          name: roshab-tasks-ios-unsigned
-          path: mobile/artifacts/ios/RoshabTasks.app
+          name: roshup-ios-simulator
+          path: mobile/artifacts/ios/RoshUP-Simulator.zip
