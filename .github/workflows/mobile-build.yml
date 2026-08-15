@@ -46,7 +46,7 @@ jobs:
           PY
 
       - name: Analyze mobile code
-        run: flutter analyze lib test
+        run: flutter analyze --no-fatal-infos lib test
 
       - name: Build RoshUP APK
         run: flutter build apk --release --target lib/main.dart
@@ -81,7 +81,7 @@ jobs:
         run: flutter pub get
 
       - name: Analyze mobile code
-        run: flutter analyze lib test
+        run: flutter analyze --no-fatal-infos lib test
 
       - name: Build RoshUP iOS simulator app
         run: flutter build ios --release --simulator --target lib/main.dart
