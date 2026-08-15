@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import '../lib/services/student_tools.dart';
+import 'package:roshup/services/student_tools.dart';
 
 void main() {
   test('calculates weighted GPA', () {
