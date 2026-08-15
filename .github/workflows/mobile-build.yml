@@ -84,7 +84,7 @@ jobs:
         run: flutter analyze --no-fatal-infos lib test
 
       - name: Build RoshUP iOS simulator app
-        run: flutter build ios --release --simulator --target lib/main.dart
+        run: flutter build ios --debug --simulator --target lib/main.dart
 
       - name: Package iOS simulator app
         run: |
