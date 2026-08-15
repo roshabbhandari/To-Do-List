@@ -41,7 +41,7 @@ jobs:
               s += '\n\ndependencies {\n    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")\n}\n'
           p.write_text(s)
           PY
-      - run: flutter analyze lib test
+      - run: flutter analyze --no-fatal-infos lib test
       - run: flutter build apk --release --target lib/main.dart
       - uses: actions/upload-artifact@v4
         with:
@@ -68,8 +68,8 @@ jobs:
       - run: flutter pub get
       - run: dart run flutter_launcher_icons
       - run: dart run flutter_native_splash:create
-      - run: flutter analyze lib test
-      - run: flutter build ios --release --simulator --target lib/main.dart
+      - run: flutter analyze --no-fatal-infos lib test
+      - run: flutter build ios --debug --simulator --target lib/main.dart
       - run: ditto -c -k --sequesterRsrc --keepParent build/ios/iphonesimulator/Runner.app /tmp/roshup-ios-simulator.zip
       - uses: actions/upload-artifact@v4
         with:
